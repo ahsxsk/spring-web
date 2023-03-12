@@ -2,6 +2,7 @@ package com.shike.snake.service.chatgpt;
 
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
+import com.shike.snake.bean.chatgpt.req.ChatInfo;
 import com.shike.snake.util.HttpUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.shike.snake.constant.chatgpt.ChatRole.ASSISTANT_ROLE;
+
 /**
  * @author shike02
  * @version 2023/3/9 10:34 PM.
@@ -21,33 +24,38 @@ public class ChatgptService {
     private static final Gson GSON = new Gson();
     private static final String url = "https://api.openai.com/v1/chat/completions";
 
-    public String getAnswer(List<String> queryContext) {
+    public String getAnswer(List<ChatInfo> chatInfos) {
         String result = null;
         try {
-            result = HttpUtils.doPostWithBody(url, buildBody(queryContext), chatgptHeaders());
+            result = HttpUtils.doPostWithBody(url, buildBody(chatInfos), chatgptHeaders());
         } catch (Exception e) {
             System.out.println(e);
         }
         return result;
     }
 
-    private String buildBody(List<String> contents) {
-        if (CollectionUtils.isEmpty(contents)) {
+    private String buildBody(List<ChatInfo> chatInfos) {
+        if (CollectionUtils.isEmpty(chatInfos)) {
             return null;
         }
         OpenAIBody openAIBody = new OpenAIBody();
         openAIBody.setModel("gpt-3.5-turbo");
         openAIBody.setTemperature(0.7);
 
-        List<OpenAIChat> openAIChatList = Lists.newArrayList();
-        for (String content : contents) {
+        List<OpenAIChat> openAChatList = Lists.newArrayList();
+        for (ChatInfo chatInfo : chatInfos) {
             OpenAIChat openAIChat = new OpenAIChat();
-            openAIChat.setRole("user");
-            openAIChat.setContent(content);
-            openAIChatList.add(openAIChat);
+            // 用户提问
+            if (ASSISTANT_ROLE == chatInfo.getRole()) {
+                openAIChat.setContent("assistant");
+            } else {
+                openAIChat.setRole("user");
+            }
+            openAIChat.setContent(chatInfo.getMesage());
+            openAChatList.add(openAIChat);
         }
 
-        openAIBody.setMessages(openAIChatList);
+        openAIBody.setMessages(openAChatList);
         return GSON.toJson(openAIBody);
     }
 
